@@ -16,7 +16,7 @@ void printLoadingAnimation(LiquidCrystal_I2C &lcd) {
   clearDisplay(lcd);
   printLogo(lcd);
 
-  lcd.setCursor(1, 1);
+  lcd.setCursor(0, 1);
   delay(LCD_CHAR_ANIMATION_INTERVAL);
   lcd.print((String) " " + WATER_IN_ICON_STRING);
 
@@ -24,7 +24,7 @@ void printLoadingAnimation(LiquidCrystal_I2C &lcd) {
   lcd.print((String) " " + MASHING_ICON_STRING);
 
   delay(LCD_CHAR_ANIMATION_INTERVAL);
-  lcd.print((String) "" + HEATING_ICON_STRING);
+  lcd.print((String) " " + HEATING_ICON_STRING);
 
   delay(LCD_CHAR_ANIMATION_INTERVAL);
   lcd.print((String) " " + COOLING_ICON_STRING);
