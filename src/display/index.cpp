@@ -7,6 +7,11 @@
 #include "./helpers.h"
 #include "./index.h"
 
+unsigned long demoStartedAtMillis = 0;
+int previousDemoStageIndex = 0;
+int currentDemoStageIndex = 0;
+bool isDonePrinted = false;
+
 void printLoadingAnimation(LiquidCrystal_I2C &lcd) {
   clearDisplay(lcd);
   printLogo(lcd);
@@ -108,9 +113,87 @@ void printBoilToBrew(LiquidCrystal_I2C &lcd) {
 }
 
 void printDone(LiquidCrystal_I2C &lcd) {
-  clearDisplay(lcd);
+  if (isDonePrinted) {
+    return;
+  }
+  isDonePrinted = true;
   printLogo(lcd);
 
   lcd.setCursor(0, 1);
   lcd.print("   Done!  ");
+}
+
+void printDemo(LiquidCrystal_I2C &lcd) {
+  if (demoStartedAtMillis == 0) {
+    demoStartedAtMillis = millis();
+  }
+  unsigned long currentTimeLeft = (unsigned long) (millis() - demoStartedAtMillis) % (unsigned long) (DEMO_STAGE_INTERVAL*10);
+
+  if (currentTimeLeft < DEMO_STAGE_INTERVAL) {
+    if (currentDemoStageIndex != 1) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 1;
+    printMashing(lcd, "#1");
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*2) {
+    if (currentDemoStageIndex != 2) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 2;
+    printMashing(lcd, "#2");
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*3) {
+    if (currentDemoStageIndex != 3) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 3;
+    printMashing(lcd, "#3");
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*4) {
+    if (currentDemoStageIndex != 4) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 4;
+    printMashing(lcd, "#4");
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*5) {
+    if (currentDemoStageIndex != 5) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 5;
+    printMashToBoil(lcd);
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*6) {
+    if (currentDemoStageIndex != 6) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 6;
+    printBoiling(lcd);
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*7) {
+    if (currentDemoStageIndex != 7) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 7;
+    printCooling(lcd);
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*8) {
+    if (currentDemoStageIndex != 8) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 8;
+    printBoilToBrew(lcd);
+
+  } else if (currentTimeLeft < (unsigned long) DEMO_STAGE_INTERVAL*9) {
+    if (currentDemoStageIndex != 9) {
+      clearDisplay(lcd);
+    }
+    currentDemoStageIndex = 9;
+    printDone(lcd);
+
+  } else {
+    isDonePrinted = false;
+    demoStartedAtMillis = millis();
+  }
 }

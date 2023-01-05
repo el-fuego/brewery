@@ -88,10 +88,12 @@ void loop() {
       );
       clearDisplay(lcd);
     }
+
+    printDemo(lcd);
     
     // printMashing(lcd, "#1");
     // printMashToBoil(lcd);
-    printBoiling(lcd);
+    // printBoiling(lcd);
     // printCooling(lcd);
     // printBoilToBrew(lcd);
     // printDone(lcd);

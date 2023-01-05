@@ -10,24 +10,33 @@ int previousTimeMinutes = NULL;
 String previousIcons;
 unsigned long previousStageNamePrintedAtMillis = 0;
 unsigned long previousTimeDotsPrintedAtMillis = 0;
+char currentAnimatedBlinkingSymbol = ' ';
 
 void printAnimatedBlinkingSymbol(LiquidCrystal_I2C &lcd, char symbol, int positionIndex, int lineIndex, unsigned long &previousMillis) {
 	unsigned long currentMillis = millis();
 
   lcd.setCursor(positionIndex, lineIndex);
   delay(LCD_SET_POSITION_DELAY);
-  if (currentMillis - previousMillis > TIME_ANIMATION_INTERVAL) {
-    lcd.print(symbol);
+
+  if ((unsigned long) (currentMillis - previousMillis) > TIME_ANIMATION_INTERVAL) {
     previousMillis = currentMillis;
+
+    if (currentAnimatedBlinkingSymbol != symbol) {
+      lcd.print(symbol);
+      currentAnimatedBlinkingSymbol = symbol;
+    }
   } else {
-    lcd.print(" ");
+    if (currentAnimatedBlinkingSymbol != ' ') {
+      lcd.print(' ');
+      currentAnimatedBlinkingSymbol = ' ';
+    }
   }
 }
 
 void printAnimated(LiquidCrystal_I2C &lcd, String text, unsigned long &previousMillis) {
 	unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis > LCD_ANIMATION_INTERVAL) {
+  if ((unsigned long) (currentMillis - previousMillis) > LCD_ANIMATION_INTERVAL) {
     previousMillis = currentMillis;
   }
 

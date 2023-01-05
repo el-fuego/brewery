@@ -16,5 +16,6 @@ void printBoiling(LiquidCrystal_I2C &lcd);
 void printCooling(LiquidCrystal_I2C &lcd);
 void printBoilToBrew(LiquidCrystal_I2C &lcd);
 void printDone(LiquidCrystal_I2C &lcd);
+void printDemo(LiquidCrystal_I2C &lcd);
 
 #endif
