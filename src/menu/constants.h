@@ -1,0 +1,8 @@
+#ifndef MENU_CONSTANTS_H
+#define MENU_CONSTANTS_H
+
+#define MIN_TEMPERATURE 7
+#define MAX_TEMPERATURE 99
+#define MAX_TIME_MINUTES 3*60 - 1
+
+#endif
