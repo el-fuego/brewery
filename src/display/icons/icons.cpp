@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-const unsigned char mashingIcon[8] = {
+const PROGMEM uint8_t mashingIcon[8] = {
   B00100,
   B00100,
   B00010,
@@ -11,7 +11,7 @@ const unsigned char mashingIcon[8] = {
   B01110
 };
 
-const unsigned char coolingIcon[8] = {
+const PROGMEM uint8_t coolingIcon[8] = {
   B10000,
   B11000,
   B10010,
@@ -22,7 +22,7 @@ const unsigned char coolingIcon[8] = {
   B00000
 };
 
-const unsigned char heatingIcon[8] = {
+const PROGMEM uint8_t heatingIcon[8] = {
   B00000,
   B00010,
   B00111,
@@ -33,7 +33,7 @@ const unsigned char heatingIcon[8] = {
   B01000
 };
 
-const unsigned char circulationIcon[8] = {
+const PROGMEM uint8_t circulationIcon[8] = {
   0b00100,
   0b00000,
   0b01010,
@@ -44,7 +44,7 @@ const unsigned char circulationIcon[8] = {
   0b01110
 };
 
-const unsigned char transferIcon[8] = {
+const PROGMEM uint8_t transferIcon[8] = {
   B00000,
   B10100,
   B01010,
@@ -55,7 +55,7 @@ const unsigned char transferIcon[8] = {
   B00000
 };
 
-const unsigned char waterInIcon[8] = {
+const PROGMEM uint8_t waterInIcon[8] = {
   B00100,
   B00100,
   B00100,
@@ -66,7 +66,7 @@ const unsigned char waterInIcon[8] = {
   B01110
 };
 
-const unsigned char hopInIcon[8] = {
+const PROGMEM uint8_t hopInIcon[8] = {
   B01010,
   B01110,
   B00100,

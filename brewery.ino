@@ -1,10 +1,10 @@
-// https://github.com/marcoschwartz/LiquidCrystal_I2C
-#include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+#include <hd44780.h>
+#include <hd44780ioClass/hd44780_I2Cexp.h>
 #include <uEEPROMLib.h>
 
 #include <Arduino-progmem-menu.h>
-#include "outputs/lcd-i2c-text/LcdI2cTextOutput.h"
+#include "outputs/lcd-hd44780/LcdHd44780Output.h"
 #include "inputs/analog-joystick/AnalogJoystick.h"
 
 #include "./src/settings/recipe.h"
@@ -40,14 +40,14 @@ MENU(appSettings, "", (0 | Menu::MENU_STYLE::NAME_HIDDEN_FOR_CHILD_LIST)
 uEEPROMLib eeprom(0x50);
 
 // Menu input and output
-LiquidCrystal_I2C lcd(0x3F, 16, 2);
+hd44780_I2Cexp lcd(0x3F);
 Menu::AnalogJoystickInput menuInput(A3, A2, true);
-Menu::LcdI2cTextOutput menuOutput(&lcd);
+Menu::LcdHd44780Output menuOutput(&lcd);
 
 
 // All devices set-up
 void setup() {
-  Wire.begin();
+  lcd.begin(16, 2);
   loadSettings(
     eeprom,
     recipe1_settings,

@@ -1,8 +1,6 @@
-#include <LiquidCrystal_I2C.h>
-#include "./constants.h"
-#include "./icons.cpp"
+#include "./index.h"
 
-void loadIcons(LiquidCrystal_I2C &lcd) {
+void loadIcons(hd44780_I2Cexp &lcd) {
   lcd.createChar(WATER_IN_ICON_INDEX, waterInIcon);
   lcd.createChar(MASHING_ICON_INDEX, mashingIcon);
   lcd.createChar(HEATING_ICON_INDEX, heatingIcon);

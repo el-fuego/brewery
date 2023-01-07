@@ -1,10 +1,3 @@
-#include <Arduino.h>
-#include <Arduino-progmem-menu.h>
-#include <LiquidCrystal_I2C.h>
-
-#include "./icons/constants.h"
-#include "./constants.h"
-#include "./helpers.h"
 #include "./index.h"
 
 unsigned long demoStartedAtMillis = 0;
@@ -12,7 +5,7 @@ int previousDemoStageIndex = 0;
 int currentDemoStageIndex = 0;
 bool isDonePrinted = false;
 
-void printLoadingAnimation(LiquidCrystal_I2C &lcd) {
+void printLoadingAnimation(hd44780_I2Cexp &lcd) {
   clearDisplay(lcd);
   printLogo(lcd);
 
@@ -39,7 +32,7 @@ void printLoadingAnimation(LiquidCrystal_I2C &lcd) {
   lcd.print((String) " " + TRANSFER_ICON_STRING);
 }
 
-void printMashing(LiquidCrystal_I2C &lcd, String stageName) {
+void printMashing(hd44780_I2Cexp &lcd, String stageName) {
   String icons = "";
 
   // TODO get data from devices
@@ -62,14 +55,14 @@ void printMashing(LiquidCrystal_I2C &lcd, String stageName) {
   printStageNameAnimated(lcd, "Mash " + stageName);
 }
 
-void printMashToBoil(LiquidCrystal_I2C &lcd) {
+void printMashToBoil(hd44780_I2Cexp &lcd) {
   // TODO get data from device
   printTimeLeft(lcd, 14, 1);
 
   printStageNameAnimated(lcd, (String) "Mash" + TRANSFER_ICON_STRING + TRANSFER_ICON_STRING + "Boil");
 }
 
-void printBoiling(LiquidCrystal_I2C &lcd) {
+void printBoiling(hd44780_I2Cexp &lcd) {
   String icons = "";
 
   // TODO get data from devices
@@ -89,7 +82,7 @@ void printBoiling(LiquidCrystal_I2C &lcd) {
   printStageNameAnimated(lcd, "Boiling");
 }
 
-void printCooling(LiquidCrystal_I2C &lcd) {
+void printCooling(hd44780_I2Cexp &lcd) {
   String icons = "";
 
   // TODO get data from devices
@@ -105,14 +98,14 @@ void printCooling(LiquidCrystal_I2C &lcd) {
   printStageNameAnimated(lcd, "Cooling");
 }
 
-void printBoilToBrew(LiquidCrystal_I2C &lcd) {
+void printBoilToBrew(hd44780_I2Cexp &lcd) {
   // TODO get data from device
   printTimeLeft(lcd, 8, 1);
 
   printStageNameAnimated(lcd, (String) "Boil" + TRANSFER_ICON_STRING + TRANSFER_ICON_STRING + "Brew");
 }
 
-void printDone(LiquidCrystal_I2C &lcd) {
+void printDone(hd44780_I2Cexp &lcd) {
   if (isDonePrinted) {
     return;
   }
@@ -123,7 +116,7 @@ void printDone(LiquidCrystal_I2C &lcd) {
   lcd.print("   Done!  ");
 }
 
-void printDemo(LiquidCrystal_I2C &lcd) {
+void printDemo(hd44780_I2Cexp &lcd) {
   if (demoStartedAtMillis == 0) {
     demoStartedAtMillis = millis();
   }

@@ -1,9 +1,4 @@
-#include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
-#include <Arduino-progmem-menu.h>
-#include "./constants.h"
 #include "./helpers.h"
-#include "./icons/constants.h"
 
 int previousTemperature = NULL;
 int previousTimeMinutes = NULL;
@@ -12,7 +7,7 @@ unsigned long previousStageNamePrintedAtMillis = 0;
 unsigned long previousTimeDotsPrintedAtMillis = 0;
 char currentAnimatedBlinkingSymbol = ' ';
 
-void printAnimatedBlinkingSymbol(LiquidCrystal_I2C &lcd, char symbol, int positionIndex, int lineIndex, unsigned long &previousMillis) {
+void printAnimatedBlinkingSymbol(hd44780_I2Cexp &lcd, char symbol, int positionIndex, int lineIndex, unsigned long &previousMillis) {
 	unsigned long currentMillis = millis();
 
   lcd.setCursor(positionIndex, lineIndex);
@@ -33,7 +28,7 @@ void printAnimatedBlinkingSymbol(LiquidCrystal_I2C &lcd, char symbol, int positi
   }
 }
 
-void printAnimated(LiquidCrystal_I2C &lcd, String text, unsigned long &previousMillis) {
+void printAnimated(hd44780_I2Cexp &lcd, String text, unsigned long &previousMillis) {
 	unsigned long currentMillis = millis();
 
   if ((unsigned long) (currentMillis - previousMillis) > LCD_ANIMATION_INTERVAL) {
@@ -50,13 +45,13 @@ void printAnimated(LiquidCrystal_I2C &lcd, String text, unsigned long &previousM
 	}
 }
 
-void printLogo(LiquidCrystal_I2C &lcd) {
+void printLogo(hd44780_I2Cexp &lcd) {
   lcd.setCursor(0, 0);
   delay(LCD_SET_POSITION_DELAY);
   lcd.print((String) TRANSFER_ICON_STRING + TRANSFER_ICON_STRING + "Let it brew!" + TRANSFER_ICON_STRING + TRANSFER_ICON_STRING);
 }
 
-void printTemperature(LiquidCrystal_I2C &lcd, int temperature) {
+void printTemperature(hd44780_I2Cexp &lcd, int temperature) {
   if (previousTemperature == temperature) {
     return;
   }
@@ -68,7 +63,7 @@ void printTemperature(LiquidCrystal_I2C &lcd, int temperature) {
   lcd.print((String) DEGREE_STRING + "C");
 }
 
-void printTimeLeft(LiquidCrystal_I2C &lcd, int timeMinutes, int lineIndex = 0) {
+void printTimeLeft(hd44780_I2Cexp &lcd, int timeMinutes, int lineIndex = 0) {
   printAnimatedBlinkingSymbol(lcd, ':', 13, lineIndex, previousTimeDotsPrintedAtMillis);
 
   if (previousTimeMinutes == timeMinutes) {
@@ -81,12 +76,12 @@ void printTimeLeft(LiquidCrystal_I2C &lcd, int timeMinutes, int lineIndex = 0) {
   lcd.print(Menu::toTime24(timeMinutes));
 }
 
-void printStageNameAnimated(LiquidCrystal_I2C &lcd, String stageName) {
+void printStageNameAnimated(hd44780_I2Cexp &lcd, String stageName) {
   lcd.home();
   printAnimated(lcd, (String) stageName + DOTS, previousStageNamePrintedAtMillis);
 }
 
-void printIcons(LiquidCrystal_I2C &lcd, String icons) {
+void printIcons(hd44780_I2Cexp &lcd, String icons) {
   if (previousIcons == icons) {
     return;
   }
@@ -97,7 +92,7 @@ void printIcons(LiquidCrystal_I2C &lcd, String icons) {
   lcd.print(icons);
 }
 
-void clearDisplay(LiquidCrystal_I2C &lcd) {
+void clearDisplay(hd44780_I2Cexp &lcd) {
   lcd.clear();
   previousTemperature = NULL;
   previousTimeMinutes = NULL;
