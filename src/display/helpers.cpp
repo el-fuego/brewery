@@ -63,7 +63,7 @@ void printTemperature(hd44780_I2Cexp &lcd, int temperature) {
   lcd.print((String) DEGREE_STRING + "C");
 }
 
-void printTimeLeft(hd44780_I2Cexp &lcd, int timeMinutes, int lineIndex = 0) {
+void printTimeLeft(hd44780_I2Cexp &lcd, int timeMinutes, int lineIndex) {
   printAnimatedBlinkingSymbol(lcd, ':', 13, lineIndex, previousTimeDotsPrintedAtMillis);
 
   if (previousTimeMinutes == timeMinutes) {

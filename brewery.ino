@@ -12,7 +12,7 @@
 #include <Arduino-devices.h>
 #include "sensors/clocks/DS3231.h"
 #include "sensors/temperature-and-humidity/DallasTemperature.h"
-#include "devices/outputs/PCA9685.h"
+#include "devices/outputs/PCF8575.h"
 #include "devices/outputs/Null.h"
 #include "devices/switch-by-time/ClockTimeIntervalSwitch.h"
 #include "devices/switch-by-time/ScheduleIntervalSwitch.h"
@@ -37,9 +37,17 @@
 #define TEMPERATURES_PIN 1
 #define JOYSTICK_PIN_X A3
 #define JOYSTICK_PIN_Y A2
-#define MASH_HEATER_ON_PIN_EXPANDER_PIN 13
-#define BOIL_HEATER_ON_PIN_EXPANDER_PIN 12
+
+#define MASH_PUMP_ON_PIN_EXPANDER_PIN 0
+#define MASH_HEATER_ON_PIN_EXPANDER_PIN 4
+#define MASH_CIRCULATION_ON_PIN_EXPANDER_PIN 6
+#define MASH_TO_BOIL_ON_PIN_EXPANDER_PIN 7
+
+#define BOIL_PUMP_ON_PIN_EXPANDER_PIN 10
 #define BOIL_COOLER_ON_PIN_EXPANDER_PIN 11
+#define BOIL_HEATER_ON_PIN_EXPANDER_PIN 14
+#define BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN 16
+#define BOIL_TO_BREW_ON_PIN_EXPANDER_PIN 17
 
 #define DO_NOTHING_TEMPERATURE 0
 
@@ -80,19 +88,17 @@ DallasTemperature_Sensor boilingTemperatureSensor(&oneWire, boilingTemperatureSe
 
 
 // Output
-// TODO: use PCF8575
-PCA9685_Output *pinExpander = new PCA9685_Output(PIN_EXPANDER_ADDRESS_I2C);
+PCF8575_Output *pinExpander = new PCF8575_Output(PIN_EXPANDER_ADDRESS_I2C);
 NullOutput *nullOutput;
 
-// TODO meshMotor
+// TODO meshMotor ?
 // ScheduleIntervalSwitch meshMotor(pinExpander, 1, settings.mesh_motor.duration, settings.mesh_motor.every);
 
 // TODO hopMotor DRV8825
 
 
-// TODO Pumps
-ScheduleIntervalSwitch mashPump(pinExpander, 0, settings.mesh_pump.duration, settings.mesh_pump.every);
-ScheduleIntervalSwitch boilPump(pinExpander, 10, settings.boil_pump.duration, settings.boil_pump.every);
+ScheduleIntervalSwitch mashPump(pinExpander, MASH_PUMP_ON_PIN_EXPANDER_PIN, settings.mesh_pump.duration, settings.mesh_pump.every);
+ScheduleIntervalSwitch boilPump(pinExpander, BOIL_PUMP_ON_PIN_EXPANDER_PIN, settings.boil_pump.duration, settings.boil_pump.every);
 
 // Heaters and cooler
 TurnOnWhenLower meshingHeater(pinExpander, (unsigned char)MASH_HEATER_ON_PIN_EXPANDER_PIN, DO_NOTHING_TEMPERATURE, meshingTemperatureSensor.temperature);
@@ -117,12 +123,13 @@ unsigned int currentBoilingCell = 0;
 ClockTimeIntervalSwitch *currentClockTimeIntervalSwitch = 0;
 S_Recipe *selectedRecipeSettings = &recipe1_settings;
 
-void initStageCallback(unsigned int startAt, unsigned int duration) {
+void initStageCallback(unsigned int startAt, unsigned int duration, void (*onInit)()) {
   if (previousStageCallback != currentStageCallback) {
-     ClockTimeIntervalSwitch *previousClockTimeIntervalSwitch = currentClockTimeIntervalSwitch;
-     currentClockTimeIntervalSwitch = createClockTimeIntervalSwitch( startAt, duration );
+    ClockTimeIntervalSwitch *previousClockTimeIntervalSwitch = currentClockTimeIntervalSwitch;
+    currentClockTimeIntervalSwitch = createClockTimeIntervalSwitch( startAt, duration );
 
-     previousStageCallback = currentStageCallback;
+    previousStageCallback = currentStageCallback;
+    onInit();
   }
 }
 
@@ -132,76 +139,81 @@ void setNextStageCallback(void (*nextStageCallback)()) {
   }
 }
 
-void mashingStageUpdate(unsigned int startAt, S_MashingStage *stageSettings, void (*nextStageCallback)()){
-  initStageCallback(startAt, stageSettings->duration);
-  if (meshingHeater.demandedValue != stageSettings->temperature) {
-    meshingHeater.demandedValue = stageSettings->temperature;
-  }
-
-  currentClockTimeIntervalSwitch->update(clock.getIntTime());
-  meshingTemperatureSensor.update();
-  meshingHeater.update();
-
-  setNextStageCallback(nextStageCallback);
+void initMashingStage1Update(){
+  // Turn ON Meshing circulation valve
+  pinExpander->write(MASH_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage1.temperature;
 }
-
 void mashingStage1Update() {
-  initStageCallback(0, selectedRecipeSettings->mashing.stage1.duration);
-  if (meshingHeater.demandedValue != selectedRecipeSettings->mashing.stage1.temperature) {
-    meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage1.temperature;
-  }
+  initStageCallback(0, selectedRecipeSettings->mashing.stage1.duration, initMashingStage1Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   meshingTemperatureSensor.update();
   meshingHeater.update();
+  mashPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(mashingStage2Update);
 }
 
+void initMashingStage2Update(){
+  // Turn ON Meshing circulation valve
+  pinExpander->write(MASH_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage2.temperature;
+}
 void mashingStage2Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage2.duration);
-  if (meshingHeater.demandedValue != selectedRecipeSettings->mashing.stage2.temperature) {
-    meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage2.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage2.duration, initMashingStage2Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   meshingTemperatureSensor.update();
   meshingHeater.update();
+  mashPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(mashingStage3Update);
 }
 
+void initMashingStage3Update(){
+  // Turn ON Meshing circulation valve
+  pinExpander->write(MASH_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage3.temperature;
+}
 void mashingStage3Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage3.duration);
-  if (meshingHeater.demandedValue != selectedRecipeSettings->mashing.stage3.temperature) {
-    meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage3.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage3.duration, initMashingStage3Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   meshingTemperatureSensor.update();
   meshingHeater.update();
+  mashPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(mashingStage4Update);
 }
 
+
+void initMashingStage4Update(){
+  // Turn ON Meshing circulation valve
+  pinExpander->write(MASH_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage4.temperature;
+}
 void mashingStage4Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage4.duration);
-  if (meshingHeater.demandedValue != selectedRecipeSettings->mashing.stage4.temperature) {
-    meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage4.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->mashing.stage4.duration, initMashingStage4Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   meshingTemperatureSensor.update();
   meshingHeater.update();
+  mashPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(mashingFiltrationUpdate);
 }
 
+void initMashingFiltrationUpdate() {
+  // Turn OFF Meshing pump
+  pinExpander->write(MASH_PUMP_ON_PIN_EXPANDER_PIN, false);
+  // Turn OFF Meshing circulation valve
+  pinExpander->write(MASH_CIRCULATION_ON_PIN_EXPANDER_PIN, false);
+
+  meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage4.temperature;
+}
 void mashingFiltrationUpdate() {
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.mesh_filtration.duration);
-  if (meshingHeater.demandedValue != selectedRecipeSettings->mashing.stage4.temperature) {
-    meshingHeater.demandedValue = selectedRecipeSettings->mashing.stage4.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.mesh_filtration.duration, initMashingFiltrationUpdate);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   meshingTemperatureSensor.update();
@@ -210,16 +222,21 @@ void mashingFiltrationUpdate() {
   setNextStageCallback(masherToBoilerUpdate);
 }
 
-void masherToBoilerUpdate() {
+void initMasherToBoilerUpdate() {
+  // Turn ON Meshing pump
+  pinExpander->write(MASH_PUMP_ON_PIN_EXPANDER_PIN, true);
+  // Turn ON Meshing to boiler valve
+  pinExpander->write(MASH_TO_BOIL_ON_PIN_EXPANDER_PIN, true);
+
   // Turn off mashing heater
   meshingHeater.demandedValue = DO_NOTHING_TEMPERATURE;
   pinExpander->write(MASH_HEATER_ON_PIN_EXPANDER_PIN, false);
 
+  boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
+}
+void masherToBoilerUpdate() {
   // Init step
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.mesh_to_boil.duration);
-  if (boilingHeater.demandedValue != selectedRecipeSettings->boiling.temperature) {
-    boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.mesh_to_boil.duration, initMasherToBoilerUpdate);
 
   // Update sensors
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
@@ -230,84 +247,92 @@ void masherToBoilerUpdate() {
   setNextStageCallback(boilingToCell1Update);
 }
 
+void initBoilingToCell1Update() {
+  // Turn OFF Meshing pump
+  pinExpander->write(MASH_PUMP_ON_PIN_EXPANDER_PIN, false);
+  // Turn OFF Meshing to boiler valve
+  pinExpander->write(MASH_TO_BOIL_ON_PIN_EXPANDER_PIN, false);
+  // Turn ON Boiling circulation valve
+  pinExpander->write(BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+
+  boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
+}
 void boilingToCell1Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, &selectedRecipeSettings->boiling.cell1.time );
-  if (boilingHeater.demandedValue != selectedRecipeSettings->boiling.temperature) {
-    boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, selectedRecipeSettings->boiling.cell1.time, initBoilingToCell1Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
   boilingHeater.update();
+  boilPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(boilingToCell2Update);
 }
 
+void initBoilingToCell2Update(){
+  // Turn ON Boiling circulation valve
+  pinExpander->write(BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
+
+  // TODO: Rotate hopMotor to cell 1
+}
 void boilingToCell2Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, &selectedRecipeSettings->boiling.cell2.time );
-  if (boilingHeater.demandedValue != selectedRecipeSettings->boiling.temperature) {
-    boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, selectedRecipeSettings->boiling.cell2.time, initBoilingToCell2Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
   boilingHeater.update();
-
-  if (currentBoilingCell != 1) {
-    // TODO: Rotate hopMotor to cell 1
-    currentBoilingCell = 1;
-  }
+  boilPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(boilingToCell3Update);
 }
 
+void initBoilingToCell3Update(){
+  // Turn ON Boiling circulation valve
+  pinExpander->write(BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
+
+  // TODO: Rotate hopMotor to cell 2
+}
 void boilingToCell3Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, &selectedRecipeSettings->boiling.cell3.time );
-  if (boilingHeater.demandedValue != selectedRecipeSettings->boiling.temperature) {
-    boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, selectedRecipeSettings->boiling.cell3.time, initBoilingToCell3Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
   boilingHeater.update();
-
-  if (currentBoilingCell != 2) {
-    // TODO: Rotate hopMotor to cell 2
-    currentBoilingCell = 2;
-  }
+  boilPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(boilingAfterCell3Update);
 }
 
+void initBoilingAfterCell3Update(){
+  // Turn ON Boiling circulation valve
+  pinExpander->write(BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN, true);
+  boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
+
+  // TODO: Rotate hopMotor to cell 3
+}
 void boilingAfterCell3Update() {
-  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, &selectedRecipeSettings->boiling.duration );
-  if (boilingHeater.demandedValue != selectedRecipeSettings->boiling.temperature) {
-    boilingHeater.demandedValue = selectedRecipeSettings->boiling.temperature;
-  }
+  initStageCallback(currentClockTimeIntervalSwitch->fromMinutes, selectedRecipeSettings->boiling.duration, initBoilingAfterCell3Update);
 
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
   boilingHeater.update();
-
-  if (currentBoilingCell != 3) {
-    // TODO: Rotate hopMotor to cell 3
-    currentBoilingCell = 3;
-  }
+  boilPump.update(clock.toEpochMinutes());
 
   setNextStageCallback(coolingUpdate);
 }
 
-void coolingUpdate() {
+void initCoolingUpdate() {
   // Turn off boiling heater
   boilingHeater.demandedValue = DO_NOTHING_TEMPERATURE;
   pinExpander->write(BOIL_HEATER_ON_PIN_EXPANDER_PIN, false);
 
-  if (currentBoilingCell != 0) {
-    // TODO: Rotate hopMotor to initial cell
-    currentBoilingCell = 0;
-  }
+  // TODO: Rotate hopMotor to initial cell
 
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, 60);
+  boilingHeater.demandedValue = selectedRecipeSettings->cooling.temperature;
+}
+void coolingUpdate() {
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, 60, initCoolingUpdate);
   if (boilingHeater.demandedValue != selectedRecipeSettings->cooling.temperature) {
     boilingHeater.demandedValue = selectedRecipeSettings->cooling.temperature;
   }
@@ -315,16 +340,25 @@ void coolingUpdate() {
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
   boilingCooler.update();
+  boilPump.update(clock.toEpochMinutes());
   
   setNextStageCallback(boilerToBrewUpdate);
 }
 
-void boilerToBrewUpdate() {
+void initBoilerToBrewUpdate() {
+  // Turn ON boiling pump
+  pinExpander->write(BOIL_PUMP_ON_PIN_EXPANDER_PIN, true);
+  // Turn ON Boiling to Brewing valve
+  pinExpander->write(BOIL_TO_BREW_ON_PIN_EXPANDER_PIN, true);
+  // Turn OFF Boiling circulation valve
+  pinExpander->write(BOIL_CIRCULATION_ON_PIN_EXPANDER_PIN, false);
+
   // Turn off boiling cooler
   boilingCooler.demandedValue = DO_NOTHING_TEMPERATURE;
   pinExpander->write(BOIL_COOLER_ON_PIN_EXPANDER_PIN, false);
-
-  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.boil_to_brew.duration);
+}
+void boilerToBrewUpdate() {
+  initStageCallback(currentClockTimeIntervalSwitch->toMinutes, settings.boil_to_brew.duration, initBoilerToBrewUpdate);
   currentClockTimeIntervalSwitch->update(clock.getIntTime());
   boilingTemperatureSensor.update();
 
@@ -332,7 +366,13 @@ void boilerToBrewUpdate() {
 }
 
 void done() {
-  printDone(&lcd);
+  // Turn OFF boiling pump
+//   pinExpander->write(BOIL_PUMP_ON_PIN_EXPANDER_PIN, false);
+  // Turn OFF Boiling to Brewing valve
+//   pinExpander->write(BOIL_TO_BREW_ON_PIN_EXPANDER_PIN, false);
+
+
+  printDone(lcd);
 
   // TODO: press any key to reload/reset
 }
